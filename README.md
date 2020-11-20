@@ -2,11 +2,12 @@
 
 ### **v0.1**
 
-数据流通用C语言(Dataflow C language, DFC)是由深圳大学高性能计算研究所，罗秋明实验室开发的，旨在提供通用的数据流编程语言。
+数据流通用C语言(Dataflow C language, DFC)是由深圳大学高性能计算研究所的系统技术组SKT（System Kernel Technology Group）开发，旨在提供通用的数据流编程语言。DFC编译器利用了ompicc编译器的代码，运行库则借用了[mbrossard](https://github.com/mbrossard/threadpool.git) 线程池代码。
 
 ## 使用方法
 ### DFC编译器安装
 ```makefile
+cd compiler/ompi
 ./configure --prefix="安装路径"
 make
 make install
@@ -32,11 +33,12 @@ make install
 
 ### **v0.1**
 
-Dataflow C language,  short for DFC, is developed by the laboratory in High Performance Computing Center, Shenzhen University, directed by Qiuming Luo. DFC aims at providing a general language for data flow programming.
+Dataflow C language,  short for DFC, is developed by the SKT（System Kernel Technology Group）in the laboratory in High Performance Computing Center, Shenzhen University. DFC aims at providing a general language for data flow programming. DFC  makes use of ompicc compiler and [mbrossard](https://github.com/mbrossard/threadpool.git)'s threadpool codes.
 
 ## USAGE
 ### install the DFC compiler
 ```makefile
+cd compiler/ompi
 ./configure --prefix="installation-path"
 make
 make install
