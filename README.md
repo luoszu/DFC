@@ -43,7 +43,7 @@ cd compiler/ompi
 make
 make install
 ```
-If the configure or the gen_version has no permission, run
+If the ./configure and the ./gen_version are denied to be executed, run
 ```makefile
 chmod +x configure/gen_version
 ```
