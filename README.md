@@ -4,6 +4,10 @@
 
 数据流通用C语言(Dataflow C language, DFC)是由深圳大学高性能计算研究所的系统技术组SKT（System Kernel Technology Group）开发，旨在提供通用的数据流编程语言。DFC编译器利用了ompicc编译器的代码，运行库则借用了[mbrossard](https://github.com/mbrossard/threadpool.git) 线程池代码。
 
+功能更加全面的第二个版本正在开发中：[v0.2](https://github.com/luoszu/DFC-0.2.git)
+
+
+
 ## 使用方法
 ### DFC编译器安装
 ```makefile
@@ -34,6 +38,8 @@ make install
 ### **v0.1**
 
 Dataflow C language,  short for DFC, is developed by the SKT（System Kernel Technology Group）in the laboratory in High Performance Computing Center, Shenzhen University. DFC aims at providing a general language for data flow programming. DFC  makes use of ompicc compiler and [mbrossard](https://github.com/mbrossard/threadpool.git)'s threadpool codes.
+
+The second version is under development: [v0.2](https://github.com/luoszu/DFC-0.2.git)
 
 ## USAGE
 ### install the DFC compiler
