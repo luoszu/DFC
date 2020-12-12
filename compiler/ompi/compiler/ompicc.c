@@ -599,13 +599,15 @@ void ompicc_compile(char *fname)
 #endif
 	if (verbose)
 		fprintf(stderr, "====> Preprocessing file (%s.c)\n  [ %s ]\n", noext, cmd);
-	if ((res = system(cmd)) != 0)
-		_exit(res);
+	//wcy
+	//if ((res = system(cmd)) != 0)
+		//_exit(res);
 #endif
 
 	/* Transform
 	 */
-	sprintf(cmd, "%s%s%s \"%s.pc\" __ompi__%s%s%s%s%s%s%s%s%s %s > \"%s\"%s",
+	 //wcy
+	sprintf(cmd, "%s%s%s \"%s.c\" __ompi__%s%s%s%s%s%s%s%s%s %s > \"%s\"%s",
 	        usegdb ? "gdb " : "", /* Run gdb instead of running _ompi directly */
 	        RealOmpiName,
 	        usegdb ? " -ex 'set args" : "", /* Pass the arguments */
@@ -630,7 +632,8 @@ void ompicc_compile(char *fname)
 		res = WEXITSTATUS(res);
 	if (keep < 2)
 	{
-		sprintf(cmd, "%s.pc", noext);               /* remove preprocessed file */
+		//wcy
+		//sprintf(cmd, "%s.pc", noext);               /* remove preprocessed file */
 		unlink(cmd);
 	}
 	if (res == 33)                                /* no pragma omp directives */

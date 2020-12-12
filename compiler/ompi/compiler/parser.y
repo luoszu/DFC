@@ -72,8 +72,11 @@ struct dfc_insert_detail
 int __has_dfc = 0;
 void dfc_insert_active_data_decl_and_update_persize(struct dfc_insert_detail *detail);
 void dfc_insert_get_active_data_call(struct dfc_insert_detail *detail);
+void dfc_insert_get_item_index(struct dfc_insert_detail *detail,char* name);
 void dfc_insert_update_active_data_call(struct dfc_insert_detail *detail);
+
 void dfc_use_detail_to_fill_main_ad_and_fn_init(struct dfc_insert_detail *detail);
+char* use_params_to_get_spec_name(astdecl params);
 
 aststmt pastree = NULL;       /* The generated AST */
 aststmt pastree_stmt = NULL;  /* For when parsing statment strings */
@@ -85,6 +88,7 @@ int     isTypedef  = 0;       /* To keep track of typedefs */
 char    *parsingstring;       /* For error reporting when parsing string */
 
 int     __has_target = 0;
+char*     use_for_df_count;
 
 //TODO this is not 100% correct (e.g. if returns lies in a dead code area).
 /* Return and goto statements that lead outside the outlined region constitute
@@ -621,6 +625,17 @@ postfix_expression:
 
   | IDENTIFIER '(' argument_expression_list ')'
     {
+      //wcy
+      if(strcmp($1, "DF_Run") == 0)
+      {
+        $$ = FunctionCall(IdentName($1), 
+                        CommaList(UnaryOperator(UOP_addr, 
+                              IdentName("DF_TFL_TABLE")), 
+                                      $3));
+                                      //wcy
+                                      use_for_df_count=$3->u.str;
+                                      break;
+      }
       /* Catch calls to "main()" (unlikely but possible) */
       $$ = strcmp($1, "main") ?
              FunctionCall(IdentName($1), $3) :
@@ -2142,10 +2157,11 @@ normal_function_definition:
         detail.body = body;
         detail.inParams = $2->decl->u.dfcvars->inParams;
         detail.outParams = $2->decl->u.dfcvars->outParams;
-		    detail.func_name = func_name;
+        detail.func_name = func_name;
         
         dfc_insert_active_data_decl_and_update_persize(&detail);
         dfc_insert_get_active_data_call(&detail);
+        dfc_insert_get_item_index(&detail,func_name);
         detail.body = BlockList(detail.body, $4);
         dfc_insert_update_active_data_call(&detail);
         
@@ -3146,7 +3162,7 @@ map_clause:
   | OMP_MAP '(' { sc_pause_openmp(); } variable_array_section_list ')'
     {
       sc_start_openmp();
-	  $$ = MapClause(OC_tofrom, $4);
+    $$ = MapClause(OC_tofrom, $4);
     }
 ;
 
@@ -5289,17 +5305,17 @@ void dfc_insert_active_data_decl_and_update_persize(struct dfc_insert_detail *de
     while(params->type == DPARAM || 
         (params->type == DLIST && params->subtype == DECL_paramlist))
     {
-	    char *name;
+      char *name;
       name = dfc_get_decl_identifier_name(params);
       (*detail).body = BlockList((*detail).body, 
-	                             (params->type == DPARAM ? 
-								 Declaration(params->spec, params->decl) :
-								 Declaration(params->decl->spec, params->decl->decl)));
+                               (params->type == DPARAM ? 
+                 Declaration(params->spec, params->decl) :
+                 Declaration(params->decl->spec, params->decl->decl)));
       (*detail).body = BlockList((*detail).body, verbit("  DF_persize_%s = sizeof(%s);",
                                  name, name));
       ++(*detail).in_params_count;
       
-	  if(params->type == DPARAM)
+    if(params->type == DPARAM)
       {
         break;
       }
@@ -5323,14 +5339,14 @@ void dfc_insert_active_data_decl_and_update_persize(struct dfc_insert_detail *de
       char *name;
       name = dfc_get_decl_identifier_name(params);
       (*detail).body = BlockList((*detail).body, 
-	                             (params->type == DPARAM ?
-								 Declaration(params->spec, params->decl) :
-								 Declaration(params->decl->spec, params->decl->decl)));
+                               (params->type == DPARAM ?
+                 Declaration(params->spec, params->decl) :
+                 Declaration(params->decl->spec, params->decl->decl)));
       (*detail).body = BlockList((*detail).body, verbit("  DF_persize_%s = sizeof(%s);",
                                  name, name));
       ++(*detail).out_params_count;
 
-	  if(params->type == DPARAM)
+    if(params->type == DPARAM)
       {
         break;
       }
@@ -5349,7 +5365,7 @@ void dfc_insert_active_data_decl_and_update_persize(struct dfc_insert_detail *de
   {
     (*detail).body = BlockList((*detail).body,
                        verbit("  int DF_FN_item_index = DF_FN_%s.item_index;\n", 
-					          detail->func_name));
+                    detail->func_name));
   }
   */
 }
@@ -5385,6 +5401,17 @@ void dfc_insert_get_active_data_call(struct dfc_insert_detail *detail)
   }
   
   (*detail).body = BlockList((*detail).body, verbit(str));
+  
+
+} 
+
+//wcy
+void dfc_insert_get_item_index(struct dfc_insert_detail *detail,char* name)
+{
+  //wcy
+  if(detail->inParams==NULL)
+    (*detail).body = BlockList((*detail).body, verbit("int DF_FN_item_index=use_funcname_to_get_item_index(&DF_TFL_TABLE,\"%s\");"
+                ,name));
 }
 
 void dfc_insert_update_active_data_call(struct dfc_insert_detail *detail)
@@ -5444,11 +5471,12 @@ void dfc_use_detail_to_fill_main_ad_and_fn_init(struct dfc_insert_detail *detail
   {
     char *name;
     //ljr
-  	name = dfc_get_decl_identifier_name(params);
-  	dfc_main_subtree_for_ad = BlockList(dfc_main_subtree_for_ad, 
+    name = dfc_get_decl_identifier_name(params);
+    //wcy
+    dfc_main_subtree_for_ad = BlockList(dfc_main_subtree_for_ad, 
                                           verbit("DF_ADInit(&DF_AD_%s, sizeof(%s), DF_fanout_%s);\n",
                                                  dfc_get_decl_identifier_name(params),
-                                                 (params->type == DPARAM) ? params->spec->name : params->decl->spec->name,
+                                                 (params->type == DPARAM) ? use_params_to_get_spec_name(params) :use_params_to_get_spec_name(params->decl) ,
                                                  dfc_get_decl_identifier_name(params)));
   }  
 
@@ -5465,10 +5493,10 @@ void dfc_use_detail_to_fill_main_ad_and_fn_init(struct dfc_insert_detail *detail
       ++Counter, params = params->u.next)
   {
     char *name;
-	name = dfc_get_decl_identifier_name(params);
-	snprintf(str+strLength, 1023-strLength, ", &DF_AD_%s", 
-	                                        dfc_get_decl_identifier_name(params));
-	strLength = strlen(str);
+  name = dfc_get_decl_identifier_name(params);
+  snprintf(str+strLength, 1023-strLength, ", &DF_AD_%s", 
+                                          dfc_get_decl_identifier_name(params));
+  strLength = strlen(str);
   }
   
   dfc_main_subtree_for_fn = BlockList(dfc_main_subtree_for_fn,
@@ -5483,17 +5511,98 @@ void dfc_use_detail_to_fill_main_ad_and_fn_init(struct dfc_insert_detail *detail
       ++Counter, params = params->u.next)
   {
     char *name;
-	name = dfc_get_decl_identifier_name(params);
-	snprintf(str+strLength, 1023-strLength, ", &DF_AD_%s", 
-	                                        dfc_get_decl_identifier_name(params));
-	strLength = strlen(str);      
+  name = dfc_get_decl_identifier_name(params);
+  snprintf(str+strLength, 1023-strLength, ", &DF_AD_%s", 
+                                          dfc_get_decl_identifier_name(params));
+  strLength = strlen(str);      
   }
 
   dfc_main_subtree_for_fn = BlockList(dfc_main_subtree_for_fn,
                                       verbit("DF_FNInit1(&DF_FN_%s, &%s, \"%s\", %d%s);\n",
                                              detail->func_name, 
-											 detail->func_name, 
-											 detail->func_name, 
+                       detail->func_name, 
+                       detail->func_name, 
                                              detail->in_params_count,
                                              str));
+}
+
+
+//wcy
+char* use_params_to_get_spec_name(astdecl params)
+{
+  char* name=(char *)malloc(200);
+  //wcy
+  memset(name,0,200); 
+  char* tmp_name;
+  if(params->spec!=NULL)
+  {
+    tmp_name=SPEC_symbols[params->spec->subtype];
+  }
+
+  //SPEC
+  if(params->spec->type==1)
+  {
+    strcat(name,tmp_name);
+    if(params->spec->subtype==16)
+    {
+    }
+    /*
+    else if
+    ...
+    */
+    else//一些常见子类型
+    {
+    }
+  }
+
+  //其他五大类
+  else
+  {
+    //SUE
+    if(params->spec->type==4)
+    {
+      strcat(name,tmp_name);
+      if(params->spec->subtype==SPEC_struct)//类型为struct的情况
+      {
+        char* sub_name=params->spec->name->name;
+        strcat(name," ");
+        strcat(name,sub_name);
+      }
+    }
+
+    //SPECLIST
+    if(params->spec->type==6)
+    {
+      astspec tmp_spec=params->spec;
+      strcat(name,SPEC_symbols[tmp_spec->body->subtype]);
+      strcat(name," ");//spec链的情况下空格放在后面
+
+      astdecl tmp_decl=ParamDecl(tmp_spec->u.next,NULL);
+      strcat(name,use_params_to_get_spec_name(tmp_decl));
+
+      //while(tmp_spec->u.next!=NULL)
+      //{
+      //  tmp_spec=tmp_spec->u.next; 
+      //  char* sub_name=SPEC_symbols[tmp_spec->subtype];
+      //  strcat(name," ");
+      //  strcat(name,sub_name);
+      //}
+    }
+
+  }
+
+  /*需要考虑一些子结点不存在的情况*/
+  if(params->decl!=NULL&&params->decl->spec!=NULL&&params->decl->spec->subtype==SPEC_star)//类型为指针的情况
+  {
+    char* sub_name=SPEC_symbols[params->decl->spec->subtype];
+    strcat(name," ");
+    strcat(name,sub_name);
+  }
+
+
+  if(name==NULL)
+  {
+    return "NULL";
+  }
+  return name;
 }

@@ -72,7 +72,7 @@ extern aststmt parse_transunit_string(char *format, ...);
 extern void exit_error(int exitvalue, char *format, ...);
 extern void warning(char *format, ...);
 char* MakeSureEnoughSpace(char *p , int length, int *size);
-bool sched_info; //ture to recorde schedule information
+static bool sched_info; //ture to recorde schedule information
 
 
 #endif

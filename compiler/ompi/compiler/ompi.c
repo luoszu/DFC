@@ -83,10 +83,12 @@ static int usedmods;    /* # used modules */
 
 /* DF-C */
 extern int __has_dfc;
+extern char* use_for_df_count;
 aststmt dfc_all_df_function_tree;
 aststmt dfc_main_subtree_for_ad;
 aststmt dfc_main_subtree_for_fn;
 aststmt dfc_output_ad_node;
+//aststmt dfc_include_tree;
 
 char* MakeSureEnoughSpace(char *p , int length, int *size)
 {
@@ -117,6 +119,7 @@ char* MakeSureEnoughSpace(char *p , int length, int *size)
 aststmt dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_print_dot()
 {
 	aststmt dfc_statistics = verbit("\n");
+	aststmt original_state;
 	int dfc_output_ad_count = 0;
 	int dfc_output_ad_memsize=2048;
 	char * dfc_output_ad=(char*)malloc(2048);
@@ -128,7 +131,7 @@ aststmt dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_prin
 	int digraphLength = 0;
 	snprintf(digraph + digraphLength, 1024, "digraph\n{\n");
 	digraphLength = strlen(digraph);
-	
+
 	for (aststmt dfcEntry = dfc_all_df_function_tree; dfcEntry; dfcEntry = dfcEntry->u.next)       //遍历函数节点
 	{
 		astdecl outParams = dfcEntry->body->u.declaration.decl->decl->u.dfcvars->outParams;           
@@ -171,7 +174,7 @@ aststmt dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_prin
 
 						digraph=MakeSureEnoughSpace(digraph,digraphLength,&digraph_memsize);
 
-						++fanout_count;
+						++fanout_count;;
 					}
 					
 					if (inParamEntry->type == DPARAM)
@@ -180,12 +183,20 @@ aststmt dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_prin
 				}
 			}
 			
-			dfc_statistics = BlockList(verbit("int DF_fanout_%s = %d;\n", 
-				                              name, fanout_count),
-				                       dfc_statistics);
-			dfc_statistics = BlockList(verbit("int DF_persize_%s;", name),
-											dfc_statistics);
-			dfc_statistics = BlockList(verbit("DF_AD DF_AD_%s;", name), dfc_statistics);
+			//dfc_statistics = BlockList(verbit("int DF_fanout_%s = %d;\n", 
+			//	                              name, fanout_count),
+			//	                       dfc_statistics);
+			//dfc_statistics = BlockList(verbit("int DF_persize_%s;", name),
+			//								dfc_statistics);
+			//dfc_statistics = BlockList(verbit("DF_AD DF_AD_%s;", name), dfc_statistics);
+
+			//wcy
+			dfc_statistics = BlockList(dfc_statistics,verbit("int DF_fanout_%s = %d;", 
+				                              name, fanout_count)
+				                       );
+			dfc_statistics = BlockList(dfc_statistics,verbit("int DF_persize_%s;", name)
+											);
+			dfc_statistics = BlockList(dfc_statistics,verbit("DF_AD DF_AD_%s;\n", name));
 			
 			if(fanout_count == 0)
 			{
@@ -211,7 +222,10 @@ aststmt dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_prin
 								 Declaration(params->spec, params->decl) :
 				*/		
 				//Declaration(params->decl->spec, params->decl->decl)));
-				dfc_statistics = BlockList(dfc_statistics, verbit("%s %s[DF_COUNT];\n",  SPEC_symbols[outParams->spec->subtype]  ,  name  ));
+
+				//dfc_statistics = BlockList(dfc_statistics, verbit("%s %s[DF_COUNT];\n",  SPEC_symbols[outParams->spec->subtype]  ,  name  ));
+				//wcy
+				dfc_statistics= BlockList(dfc_statistics,verbit("%s %s[%s];\n",  use_params_to_get_spec_name(outParams)  ,  name, use_for_df_count  ));
 
 			}
 			
@@ -221,13 +235,23 @@ aststmt dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_prin
 		}	
 	}
 
-	dfc_statistics = BlockList(verbit("\n"), dfc_statistics);
+	//dfc_statistics = BlockList(verbit("\n"), dfc_statistics);
+	//wcy
+	dfc_statistics = BlockList(dfc_statistics,verbit("\n"));
 
 	for (aststmt dfcEntry = dfc_all_df_function_tree; dfcEntry; dfcEntry = dfcEntry->u.next)
-		dfc_statistics = BlockList(verbit("DF_FN DF_FN_%s;", 
+	{
+		//dfc_statistics = BlockList(verbit("DF_FN DF_FN_%s;", 
+		//                                  dfc_get_decl_identifier_name(
+		//									  dfcEntry->body->u.declaration.decl)),
+		//                           dfc_statistics);
+
+		//wcy
+		dfc_statistics = BlockList(dfc_statistics,verbit("DF_FN DF_FN_%s;", 
 		                                  dfc_get_decl_identifier_name(
-											  dfcEntry->body->u.declaration.decl)),
-		                           dfc_statistics);
+											  dfcEntry->body->u.declaration.decl))
+		                           );
+	}
 
 	dfc_statistics = BlockList(dfc_statistics, verbit("DF_TFL DF_TFL_TABLE;\n"));
 	//dfc_statistics = BlockList(dfc_statistics, verbit("int DF_count=DF_COUNT;\n")); //ljr
@@ -276,6 +300,18 @@ aststmt dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_prin
 	fprintf(stderr, "%s\n", "freedfc_output_ad\n");
 	return (dfc_statistics);
 }
+//wcy
+void dfc_insert_include_to_head(void)
+{
+  	aststmt dfc_include_tree=BlockList(verbit("#include<stdlib.h>"),verbit("#include<stdio.h>"));
+	dfc_include_tree=BlockList(dfc_include_tree,verbit("#include<dfc.h>"));
+	aststmt t=ast;
+  	while (t->u.next->type == STATEMENTLIST)
+	{
+		t = t->u.next;
+	}
+	t->u.next=BlockList(dfc_include_tree,t->u.next);
+}
 
 aststmt dfc_find_the_first_presence_of_df_function(aststmt t)
 {
@@ -290,9 +326,12 @@ aststmt dfc_find_the_first_presence_of_df_function(aststmt t)
 			t = t->u.next;
 		else
 			break;
-	}
-
-	return target;
+	};
+	//wcy
+	if(t->u.next->type==FUNCDEF)
+		return t;
+	else
+		return target;
 }
 
 // NOTE(luobin): Put the dfc_statistics before _all_ the dfc functions and 
@@ -301,9 +340,17 @@ void dfc_place_dfc_globals_before_any_df_functions(aststmt dfc_statistics)
 {
 	aststmt targetPoint = ast;
 	targetPoint = dfc_find_the_first_presence_of_df_function(targetPoint);
-	aststmt targetNext = targetPoint->u.next;
-
-	targetPoint->u.next = BlockList(targetNext, dfc_statistics);
+	//aststmt targetNext = targetPoint->u.next;
+	//targetPoint->u.next = BlockList(targetNext, dfc_statistics);
+	//wcy
+	if(targetPoint->u.next->type==FUNCDEF)
+	{
+		targetPoint->u.next=BlockList(dfc_statistics,targetPoint->u.next);
+	}
+	else
+	{
+		targetPoint->u.next=BlockList(targetPoint->u.next,dfc_statistics);
+	}
 }
 
 void append_new_main()
@@ -730,6 +777,7 @@ int main(int argc, char *argv[])
 	knowMalloc = (symtab_get(stab, Symbol("malloc"), FUNCNAME) != NULL);
 	symtab_drain(stab);
 
+
 	if(!__has_dfc)
 	{
 		if (hasMainfunc && (enableOpenMP || testingmode || processmode))
@@ -827,6 +875,8 @@ int main(int argc, char *argv[])
 		aststmt dfc_statistics = 
 			dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_print_dot();
 			dfc_place_dfc_globals_before_any_df_functions(dfc_statistics);
+		//wcy
+		dfc_insert_include_to_head();
 	}
 
 	append_new_main();
