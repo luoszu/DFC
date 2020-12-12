@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <sys/time.h>
 
-#define THREADNUM  32
+#define THREADNUM  16
 //#include <sys/sysinfo.h>
 
 #include "threadpool.h"
@@ -140,7 +140,6 @@ void DF_AD_UpData(int DF_Count,DF_TFL *table, DF_FN *F,...){       //地址，�
         b->Tail=b->MaxSize;
         b->MaxSize=b->MaxSize*2;
       }
-
       memcpy(b->Data + b->persize * b->Tail, new_data_addr, new_data_size);
       memcpy(b->Data + b->persize * b->Tail + new_data_size, &b->FanOut, INTSIZE);//改进点：改为赋值
 
@@ -157,12 +156,8 @@ void DF_AD_UpData(int DF_Count,DF_TFL *table, DF_FN *F,...){       //地址，�
       for (int i=0; i < b->FanOut; i++) {
         done = 0;
         new_r = NULL;
-
         temp_f = b->DF_Fun_Index[i];
-        // printf("寫入數據111\n");
-        // printf("%d\n", temp_f);
         pthread_mutex_lock(&temp_f->ready_lock);
-        // printf("寫入數據\n");
         finish_data_count = temp_f->DF_Fun_AD_InPut->TargetNum; // 当前方法需要多少个数据
         finish_flag = (1 << finish_data_count) - 1; // 2 => 0000 0011
         flag = b->DF_flag_Index[i]; // 当前方法的第几个数据
@@ -575,4 +570,15 @@ void DF_Source_Stop(DF_TFL *table, int item_index) {
   // clean_index_in_queue(table->pool, item_index);
   table->source_list[item_index].stop = 1;
   table->source_list[item_index].F->stop = 1;
+}
+
+//wcy
+int use_funcname_to_get_item_index(DF_TFL *table,char* funcname)
+{
+  for(int i=0;i<table->Num;i++)
+  {
+    if(strcmp(table->source_list[i].F->Name,funcname)==0)
+      return i;
+  }
+  return -1;
 }
