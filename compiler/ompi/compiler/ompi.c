@@ -274,7 +274,7 @@ aststmt dfc_traverse_dfc_all_df_function_tree_for_globals_and_output_ad_and_prin
 
 	if(show_DAG)	//ljr: ture to generate DAG
 	{
-		fprintf(stderr, "%s" "the dataflow graph will be drawed\n");
+		fprintf(stderr, "%s", "the dataflow graph will be drawed\n");
 		FILE *fp = fopen("digraph.gv", "w");
 		if(!fp)
 		{
